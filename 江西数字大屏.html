@@ -1,0 +1,1498 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>固定资产投资温度计</title>
+    <script src="../node_modules/echarts/dist/echarts.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body, html {
+            height: 100%; width: 100%; padding: 0; margin: 0;
+            overflow: hidden; background: #011430;
+        }
+        .jiangxi_content {
+            width: 1920px; height: 1080px; background: #011430;
+            background-image: url('assets/all_bg.png'); background-size: 100% 100%;
+            position: absolute; top: 0; left: 0; overflow: hidden;
+        }
+        .header {
+            height: 112px; background: #011430; display: flex;
+            justify-content: space-between; align-items: center;
+            background-image: url('assets/head_title.png'); background-size: 100% 100%;
+        }
+        .header-title { color: #75deef; font-size: 28px; letter-spacing: 8px; }
+        .selectRange {
+            height: 100%; margin-left: 33px; padding-top: 22px; display: flex;
+        }
+        .selectRange img { width: 24px; height: 24px; }
+        .selectRange span {
+            margin-left: 8px; width: auto; height: 26px; opacity: 1;
+            font-family: Source Han Sans CN, sans-serif; font-size: 16px; font-weight: 400;
+            line-height: normal; letter-spacing: 0; color: #fff;
+        }
+        /* Tab Navigation */
+        .tab-nav {
+            width: 100%; height: 42px; display: flex; align-items: center;
+            justify-content: center; gap: 0; background: rgba(1, 20, 48, 0.9);
+            border-bottom: 1px solid rgba(56, 136, 255, 0.2);
+        }
+        .tab-nav-item {
+            padding: 0 36px; height: 100%; display: flex; align-items: center;
+            font-family: Microsoft YaHei, sans-serif; font-size: 16px;
+            color: #7eb8e0; cursor: pointer; letter-spacing: 2px;
+            border-bottom: 3px solid transparent; transition: all 0.3s;
+        }
+        .tab-nav-item:hover { color: #fff; }
+        .tab-nav-item.active {
+            color: #fff; font-weight: 700;
+            border-bottom: 3px solid #00a2ff;
+            background: linear-gradient(180deg, rgba(0, 162, 255, 0.15), transparent);
+        }
+        .tab-page { display: none; width: 100%; height: calc(100% - 154px); }
+        .tab-page.active { display: block; }
+        /* Main Content */
+        .main-content {
+            width: 100%; height: 100%; display: flex;
+            justify-content: space-between; padding: 0 24px;
+        }
+        .left-content { width: 460px; height: 100%; display: flex; flex-direction: column; justify-content: space-between; }
+        .left-chart-item { width: 100%; flex: 1; min-height: 0; display: flex; flex-direction: column; }
+        .left-chart-item .chart-title-content { width: 100%; height: 44px; flex-shrink: 0; padding-left: 15px; }
+        .left-chart-item .chart-title { width: 380px; height: 44px; }
+        .left-chart-item .chart-title h2 { font-size: 20px; }
+        .middle-content { width: calc(100% - 920px); height: 100%; }
+        .kpi-container {
+            width: 100%; height: 120px; display: flex; align-items: center;
+            justify-content: space-between;
+            background-image: url('assets/bg1.png'); background-size: 100% 100%;
+        }
+        .kpi-card {
+            width: 200px; height: 100%; display: flex; align-content: center; padding: 14px 0 0;
+        }
+        .card-item-left-content img { width: 48px; height: 56px; }
+        .card-item-right-content { padding-left: 6px; }
+        .kpi-card-title {
+            width: 110px; font-family: Source Han Sans CN, sans-serif;
+            font-size: 11px; font-weight: 500; line-height: 13px;
+            letter-spacing: 0.02em; color: #d2e4ff;
+        }
+        .kpi-card-value-date { display: flex; align-items: center; height: 32px; }
+        .kpi-card-value {
+            width: auto; height: 32px; opacity: 1;
+            font-family: Alimama ShuHeiTi, sans-serif; font-size: 28px; font-weight: 700;
+            line-height: 32px; letter-spacing: 0.02em;
+            background: linear-gradient(180deg, rgba(9, 165, 255, 0.8), rgba(9, 165, 255, 0) 66%, rgba(9, 165, 255, 0)), #fff;
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .kpi-card-date {
+            width: 72px; height: 20px; border-radius: 100px; opacity: 1;
+            box-sizing: border-box; border: 1px solid rgba(56, 136, 255, 0.5);
+            display: flex; align-items: center; justify-content: center;
+            margin-top: 2px; text-align: center;
+        }
+        .kpi-card-date span {
+            height: 13px; opacity: 1; font-family: Source Han Sans CN, sans-serif;
+            font-size: 12px; font-weight: 400; line-height: 13px;
+            letter-spacing: 0.02em; color: #3888ff; text-align: center;
+        }
+        .card-left-border {
+            width: 1px; height: 72px; padding-left: 20px;
+            border-left: 1px solid rgba(56, 136, 255, 0.5);
+        }
+        .kpi-card:first-child .card-left-border { border-left: none; }
+        .middle-content .chart-title-content { width: 100%; height: 44px; padding-left: 80px; }
+        .middle-content .chart-title-content .chart-title {
+            background: linear-gradient(90deg, rgba(0,40,120,0.5), rgba(0,60,180,0.3), rgba(0,40,120,0.5));
+            border: 1px solid rgba(0,140,255,0.25);
+            border-radius: 4px;
+            box-shadow: 0 0 15px rgba(0,80,200,0.1);
+        }
+        .middle-content .chart-title-content .chart-title h2 {
+            font-size: 22px; letter-spacing: 4px;
+        }
+        .middle-data-card { margin: 6px 80px 0; height: 72px; }
+        .wen-du-des-content {
+            width: 100%; height: 100%;
+            background: rgba(0,15,50,0.6);
+            border: 1px solid rgba(0,120,255,0.2);
+            border-radius: 4px;
+            padding: 8px 14px;
+            box-shadow: inset 0 0 20px rgba(0,60,160,0.08);
+        }
+        .des {
+            width: 100%; height: 100%; padding: 4px 10px; opacity: 1;
+            font-family: Source Han Sans CN, sans-serif; font-size: 12px; font-weight: 400;
+            line-height: 18px; text-align: justify; letter-spacing: 0.5px; color: rgba(100,180,255,0.8);
+            background: transparent;
+        }
+        .middle-bottom-card {
+            width: 100%; flex: 1; min-height: 0;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            position: relative;
+        }
+        .right-content { width: 460px; height: 100%; }
+        .right-content .chart-title-content { width: 100%; height: 44px; padding-left: 15px; }
+        .right-chart-item { width: 100%; }
+        .right-chart-item .chart-draw-content { width: 100%; }
+        .chart-title {
+            width: 380px; height: 44px; display: flex;
+            justify-content: space-between; align-items: center;
+            background-image: url('assets/title_bg.png'); background-size: 100% 100%;
+        }
+        .chart-title h2 {
+            color: #fff; margin: 0; padding-left: 45px; opacity: 1;
+            font-family: Microsoft YaHei, sans-serif; font-size: 20px; font-weight: 700;
+            line-height: 20px; letter-spacing: 0.06em;
+            -webkit-background-clip: text; background-clip: text;
+            text-shadow: 0 0 0.33px #000;
+        }
+        .tab-content {
+            width: 100%; height: 40px; display: flex;
+            align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap;
+        }
+        .tab-item {
+            width: auto; height: 24px; padding: 0 8px; line-height: 15px;
+            text-align: center; display: flex; align-items: center; letter-spacing: 0;
+            border-radius: 18px; opacity: 1; font-family: Source Han Sans CN, sans-serif;
+            font-size: 11px; color: #00a2ff;
+            background: linear-gradient(0deg, rgba(0, 133, 255, 0.2), rgba(0, 163, 255, 0) 105%);
+            box-sizing: border-box; border: 0.7px solid;
+            border-image: linear-gradient(180deg, rgba(0, 163, 255, 0), rgba(0, 163, 255, 0.5)) 1;
+            cursor: pointer; white-space: nowrap;
+        }
+        .tab-item.active { font-weight: 700; color: #fff; }
+        .chart { width: 100%; height: 200px; }
+
+        /* Gauge chart container */
+        .gauge-container { width: 100%; flex: 1; min-height: 0; }
+
+        /* Month selector */
+        .month-selector {
+            display: flex; align-items: center; gap: 8px;
+            padding: 0 15px; margin-top: 4px; flex-shrink: 0;
+        }
+        .month-selector label {
+            font-family: Microsoft YaHei, sans-serif; font-size: 13px;
+            color: #7eb8e0; white-space: nowrap;
+        }
+        .month-selector select {
+            background: rgba(0, 72, 194, 0.35); color: #fff;
+            border: 1px solid rgba(56, 136, 255, 0.5); border-radius: 4px;
+            padding: 4px 12px; font-size: 13px; font-family: Microsoft YaHei, sans-serif;
+            outline: none; cursor: pointer; min-width: 120px;
+        }
+        .month-selector select option { background: #011430; color: #fff; }
+
+        /* Right panel: 3 layer charts stacked */
+        .right-layer-section { width: 100%; margin-bottom: 2px; }
+        .right-layer-section .layer-title {
+            width: 100%; height: 30px; display: flex; align-items: center;
+            padding-left: 15px;
+            font-family: Microsoft YaHei, sans-serif; font-size: 13px;
+            font-weight: 700; color: #7eb8e0; letter-spacing: 1px;
+            border-left: 3px solid #00a2ff; background: rgba(0,72,194,0.12);
+        }
+        .right-layer-section .layer-chart { width: 100%; height: 260px; }
+
+        /* ===== Page 2 Specific Styles ===== */
+        .page2-layout {
+            width: 100%; height: 100%; display: flex;
+            justify-content: space-between; padding: 0 20px;
+        }
+        .page2-left { width: 400px; height: 100%; display: flex; flex-direction: column; gap: 4px; }
+        .page2-left .chart-title-content { width: 100%; height: 38px; padding-left: 8px; }
+        .page2-left .chart-title { width: 380px; height: 38px; }
+        .page2-left .chart-title h2 { font-size: 16px; padding-left: 22px; }
+        .page2-left .chart { height: 270px; }
+        .page2-center { width: calc(100% - 800px); height: 100%; display: flex; flex-direction: column; }
+        .page2-center-top { height: 55%; width: 100%; }
+        .page2-center-top .chart-title-content { padding-left: 40px; }
+        .page2-center-top .chart { height: calc(100% - 38px); }
+        .page2-center-bottom {
+            height: 45%; width: 100%; display: flex; gap: 10px; padding-top: 4px;
+        }
+        .page2-center-bottom-item {
+            flex: 1; display: flex; flex-direction: column;
+        }
+        .page2-center-bottom-item .chart-title-content { width: 100%; height: 38px; padding-left: 8px; }
+        .page2-center-bottom-item .chart-title { width: 300px; height: 38px; }
+        .page2-center-bottom-item .chart-title h2 { font-size: 14px; padding-left: 20px; }
+        .page2-center-bottom-item .chart { flex: 1; height: auto; }
+        .page2-right { width: 380px; height: 100%; display: flex; flex-direction: column; gap: 4px; }
+        .page2-right .chart-title-content { width: 100%; height: 38px; padding-left: 8px; }
+        .page2-right .chart-title { width: 360px; height: 38px; }
+        .page2-right .chart-title h2 { font-size: 16px; padding-left: 20px; }
+        .page2-right .chart { height: 270px; }
+
+        /* ===== Page 3 Specific Styles ===== */
+        .page3-layout { width: 100%; height: 100%; display: flex; flex-direction: column; padding: 10px 40px; }
+        .page3-title-bar { width: 100%; height: 44px; flex-shrink: 0; }
+        .page3-chart-container { width: 100%; flex: 1; min-height: 300px; }
+        .page3-chart-container .chart { width: 100%; height: 100%; }
+        .page3-conclusion {
+            width: 100%; height: 200px; margin-top: 8px; flex-shrink: 0;
+            background: rgba(0, 72, 194, 0.15); border: 1px solid rgba(56, 136, 255, 0.3);
+            border-radius: 8px; padding: 18px 28px;
+        }
+        .page3-conclusion h3 {
+            font-family: Microsoft YaHei, sans-serif; font-size: 17px;
+            color: #75deef; margin-bottom: 10px; letter-spacing: 2px;
+        }
+        .page3-conclusion p {
+            font-family: Source Han Sans CN, sans-serif; font-size: 14px;
+            color: #b0d4f1; line-height: 26px; letter-spacing: 1px;
+        }
+
+        /* ===== Thermometer Center Area (参照温度计.png 全面优化) ===== */
+        .thermometer-section {
+            width: 100%; flex: 1; min-height: 0;
+            display: flex; flex-direction: column; align-items: center;
+            position: relative;
+        }
+        /* Tab bar */
+        .therm-tabs {
+            display: flex; align-items: center; gap: 0;
+            margin: 6px 0 4px;
+            background: rgba(0,20,60,0.6);
+            border-radius: 4px;
+            border: 1px solid rgba(0,120,255,0.2);
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        .therm-tab {
+            padding: 7px 32px; font-family: Microsoft YaHei, sans-serif;
+            font-size: 13px; color: rgba(140,180,220,0.7); cursor: pointer;
+            letter-spacing: 2px; transition: all 0.3s;
+            position: relative;
+        }
+        .therm-tab.active {
+            color: #fff; font-weight: 700;
+            background: linear-gradient(180deg, rgba(0,100,220,0.5), rgba(0,60,160,0.3));
+        }
+        .therm-tab.active::after {
+            content: ''; position: absolute; bottom: 0; left: 20%; right: 20%;
+            height: 2px; background: #00a2ff; border-radius: 1px;
+        }
+        /* Chart container - sci-fi panel, 增大高度填满中间区域 */
+        .therm-chart-box {
+            width: 88%; max-width: 660px; height: 480px;
+            margin: 0 auto;
+            position: relative;
+            background: linear-gradient(180deg, #060d24 0%, #0a1535 40%, #0d1a40 100%);
+            border: 1px solid rgba(0,120,255,0.2);
+            border-radius: 6px;
+            box-shadow: 0 0 30px rgba(0,80,200,0.08), inset 0 0 60px rgba(0,40,120,0.1);
+            overflow: hidden;
+        }
+        /* 四角科技风括号 - 加大加亮 */
+        .therm-chart-box::before, .therm-chart-box::after {
+            content: ''; position: absolute; width: 28px; height: 28px; z-index: 2;
+            border-color: rgba(0,200,255,0.8); border-style: solid;
+        }
+        .therm-chart-box::before {
+            top: 4px; left: 4px; border-width: 2px 0 0 2px;
+        }
+        .therm-chart-box::after {
+            top: 4px; right: 4px; border-width: 2px 2px 0 0;
+        }
+        .therm-chart-box .corner-bl, .therm-chart-box .corner-br {
+            position: absolute; width: 28px; height: 28px; z-index: 2;
+            border-color: rgba(0,200,255,0.8); border-style: solid;
+        }
+        .therm-chart-box .corner-bl { bottom: 4px; left: 4px; border-width: 0 0 2px 2px; }
+        .therm-chart-box .corner-br { bottom: 4px; right: 4px; border-width: 0 2px 2px 0; }
+        /* 内侧发光线 */
+        .therm-chart-box .glow-line-top {
+            position: absolute; top: 0; left: 10%; right: 10%; height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(0,180,255,0.3), transparent);
+        }
+        .therm-chart-box .glow-line-bottom {
+            position: absolute; bottom: 0; left: 10%; right: 10%; height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(0,180,255,0.2), transparent);
+        }
+        .therm-chart { width: 100%; height: 100%; position: relative; z-index: 1; }
+        /* 圆柱底座平台 - 参照参考图 */
+        .platform-base {
+            width: 100%; height: 130px; margin-top: -5px; flex-shrink: 0;
+            display: flex; justify-content: center; align-items: flex-end;
+        }
+        .platform-base svg { width: 420px; height: 130px; }
+    </style>
+</head>
+<body>
+    <div class="jiangxi_content" id="screen-container">
+        <!-- Header -->
+        <div class="header">
+            <div class="selectRange">
+                <img src="assets/time_icon.png" alt="时间图标">
+                <span id="currentTime">2026/06/30 17:30:00</span>
+            </div>
+            <div class="header-title"></div>
+            <div class="selectRange"></div>
+        </div>
+
+        <!-- Tab Navigation -->
+        <div class="tab-nav">
+            <div class="tab-nav-item active" data-page="page1">温度计核心指标</div>
+            <div class="tab-nav-item" data-page="page2">预测分析</div>
+            <div class="tab-nav-item" data-page="page3">趋势联动</div>
+        </div>
+
+        <!-- ==================== PAGE 1: 温度计核心指标 ==================== -->
+        <div class="tab-page active" id="page1">
+            <div class="main-content">
+                <!-- Left: 三层得分仪表盘 -->
+                <div class="left-content">
+                    <div class="left-chart-item">
+                        <div class="chart-title-content">
+                            <div class="chart-title"><h2>核心层得分</h2></div>
+                        </div>
+                        <div class="gauge-container" id="gauge-core"></div>
+                    </div>
+                    <div class="left-chart-item">
+                        <div class="chart-title-content">
+                            <div class="chart-title"><h2>支撑层得分</h2></div>
+                        </div>
+                        <div class="gauge-container" id="gauge-support"></div>
+                    </div>
+                    <div class="left-chart-item">
+                        <div class="chart-title-content">
+                            <div class="chart-title"><h2>验证层得分</h2></div>
+                        </div>
+                        <div class="gauge-container" id="gauge-verify"></div>
+                    </div>
+                </div>
+
+                <!-- Middle: KPI + 温度计 -->
+                <div class="middle-content">
+                    <div class="kpi-container">
+                        <div class="kpi-card">
+                            <div class="card-left-border"></div>
+                            <div class="card-item-left-content"><img src="assets/kpi1.png" alt="工业用电"></div>
+                            <div class="card-item-right-content">
+                                <div class="kpi-card-title">工业企业用电量(亿千瓦时)</div>
+                                <div class="kpi-card-value-date"><div class="kpi-card-value" id="kpi1-val">121.84</div></div>
+                                <div class="kpi-card-date"><span id="kpi1-date">2026/05</span></div>
+                            </div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="card-left-border"></div>
+                            <div class="card-item-left-content"><img src="assets/kpi2.png" alt="集成电路"></div>
+                            <div class="card-item-right-content">
+                                <div class="kpi-card-title">集成电路产量(万块)</div>
+                                <div class="kpi-card-value-date"><div class="kpi-card-value" id="kpi2-val">34735.5</div></div>
+                                <div class="kpi-card-date"><span id="kpi2-date">2026/05</span></div>
+                            </div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="card-left-border"></div>
+                            <div class="card-item-left-content"><img src="assets/kpi3.png" alt="电工仪器"></div>
+                            <div class="card-item-right-content">
+                                <div class="kpi-card-title">电工仪器仪表产量(万台)</div>
+                                <div class="kpi-card-value-date"><div class="kpi-card-value" id="kpi3-val">43.77</div></div>
+                                <div class="kpi-card-date"><span id="kpi3-date">2026/05</span></div>
+                            </div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="card-left-border"></div>
+                            <div class="card-item-left-content"><img src="assets/kpi4.png" alt="外资"></div>
+                            <div class="card-item-right-content">
+                                <div class="kpi-card-title">实际使用外资金额(亿美元)</div>
+                                <div class="kpi-card-value-date"><div class="kpi-card-value" id="kpi4-val">0.09</div></div>
+                                <div class="kpi-card-date"><span id="kpi4-date">2026/04</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="chart-title-content">
+                        <div class="chart-title"><h2>固定资产温度计</h2></div>
+                    </div>
+
+                    <!-- 月份筛选器 -->
+                    <div class="month-selector" style="justify-content:center; padding: 4px 0 2px;">
+                        <label>数据月份：</label>
+                        <select id="monthSelect"></select>
+                    </div>
+
+                    <!-- Tab Bar: 本月数值 | 历史趋势 -->
+                    <div class="therm-tabs">
+                        <div class="therm-tab active" data-view="current">本月数值</div>
+                        <div class="therm-tab" data-view="history">历史趋势</div>
+                    </div>
+
+                    <div class="middle-data-card">
+                        <div class="wen-du-des-content">
+                            <div class="des">本模型基于多维度经济指标，通过核心层、支撑层、验证层三层指标体系的加权计算，将投资市场的综合状态量转化为0-100度的温度指数，用于评估固定资产投资市场的冷热状态。</div>
+                        </div>
+                    </div>
+
+                    <!-- Chart + Platform -->
+                    <div class="thermometer-section">
+                        <div class="therm-chart-box">
+                            <div class="glow-line-top"></div>
+                            <div class="glow-line-bottom"></div>
+                            <div class="corner-bl"></div>
+                            <div class="corner-br"></div>
+                            <div class="therm-chart" id="chart-therm"></div>
+                        </div>
+                        <div class="platform-base">
+                            <svg viewBox="0 0 420 130" xmlns="http://www.w3.org/2000/svg">
+                                <defs>
+                                    <radialGradient id="pglow" cx="50%" cy="50%">
+                                        <stop offset="0%" stop-color="rgba(0,180,255,0.20)"/>
+                                        <stop offset="60%" stop-color="rgba(0,100,200,0.08)"/>
+                                        <stop offset="100%" stop-color="rgba(0,40,120,0)"/>
+                                    </radialGradient>
+                                    <radialGradient id="pcore" cx="50%" cy="40%">
+                                        <stop offset="0%" stop-color="rgba(0,200,255,0.30)"/>
+                                        <stop offset="100%" stop-color="rgba(0,80,180,0)"/>
+                                    </radialGradient>
+                                    <linearGradient id="pcyl" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stop-color="rgba(0,160,255,0.40)"/>
+                                        <stop offset="50%" stop-color="rgba(0,100,220,0.20)"/>
+                                        <stop offset="100%" stop-color="rgba(0,40,120,0.05)"/>
+                                    </linearGradient>
+                                    <linearGradient id="pcylSide" x1="0" y1="0" x2="1" y2="0">
+                                        <stop offset="0%" stop-color="rgba(0,120,255,0.15)"/>
+                                        <stop offset="50%" stop-color="rgba(0,180,255,0.30)"/>
+                                        <stop offset="100%" stop-color="rgba(0,120,255,0.15)"/>
+                                    </linearGradient>
+                                </defs>
+                                <!-- 最外层辉光 -->
+                                <ellipse cx="210" cy="100" rx="200" ry="26" fill="url(#pglow)"/>
+                                <!-- 外层光环 -->
+                                <ellipse cx="210" cy="100" rx="160" ry="20" fill="none" stroke="rgba(0,160,255,0.12)" stroke-width="1.5"/>
+                                <ellipse cx="210" cy="100" rx="120" ry="15" fill="none" stroke="rgba(0,160,255,0.08)" stroke-width="1"/>
+                                <!-- 核心光斑 -->
+                                <ellipse cx="210" cy="100" rx="70" ry="10" fill="url(#pcore)"/>
+                                <!-- 圆柱体侧面 -->
+                                <path d="M172,35 L172,90 Q172,108 210,108 Q248,108 248,90 L248,35" fill="url(#pcylSide)" stroke="rgba(0,160,255,0.25)" stroke-width="1"/>
+                                <!-- 圆柱体高光 -->
+                                <path d="M185,40 L185,88 Q185,100 195,103" fill="none" stroke="rgba(100,220,255,0.20)" stroke-width="2.5"/>
+                                <!-- 圆柱体顶面 -->
+                                <ellipse cx="210" cy="35" rx="38" ry="11" fill="rgba(0,80,200,0.25)" stroke="rgba(0,180,255,0.40)" stroke-width="1.5"/>
+                                <ellipse cx="210" cy="35" rx="25" ry="7" fill="rgba(0,120,255,0.12)" stroke="rgba(0,200,255,0.15)" stroke-width="0.5"/>
+                                <!-- 底座平台 -->
+                                <ellipse cx="210" cy="100" rx="90" ry="16" fill="rgba(0,50,150,0.25)" stroke="rgba(0,180,255,0.25)" stroke-width="1"/>
+                                <ellipse cx="210" cy="100" rx="65" ry="11" fill="rgba(0,70,180,0.12)" stroke="rgba(0,180,255,0.12)" stroke-width="0.5"/>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: 各层指标体系（全部展开） -->
+                <div class="right-content">
+                    <div class="chart-title-content" style="padding-left:15px;">
+                        <div class="chart-title"><h2>指标体系</h2></div>
+                    </div>
+                    <div class="right-layer-section">
+                        <div class="layer-title">核心层指标</div>
+                        <div class="layer-chart" id="chart-layer-core"></div>
+                    </div>
+                    <div class="right-layer-section">
+                        <div class="layer-title" style="border-left-color:#61D965;">支撑层指标</div>
+                        <div class="layer-chart" id="chart-layer-support"></div>
+                    </div>
+                    <div class="right-layer-section">
+                        <div class="layer-title" style="border-left-color:#FF6B35;">验证层指标</div>
+                        <div class="layer-chart" id="chart-layer-verify"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== PAGE 2: 预测分析 ==================== -->
+        <div class="tab-page" id="page2">
+            <div class="page2-layout">
+                <!-- Left: 三列布局 - 制造业/基础设施/房地产预测 -->
+                <div class="page2-left">
+                    <div>
+                        <div class="chart-title-content">
+                            <div class="chart-title"><h2>固投增速预测</h2></div>
+                        </div>
+                        <div class="chart" id="p2-chart-left1"></div>
+                    </div>
+                    <div>
+                        <div class="chart-title-content">
+                            <div class="chart-title"><h2>基础设施/制造业预测</h2></div>
+                        </div>
+                        <div class="chart" id="p2-chart-left2"></div>
+                    </div>
+                    <div>
+                        <div class="chart-title-content">
+                            <div class="chart-title"><h2>房地产/高技术预测</h2></div>
+                        </div>
+                        <div class="chart" id="p2-chart-left3"></div>
+                    </div>
+                </div>
+
+                <!-- Center: 固投预测趋势图 + 模型预测 -->
+                <div class="page2-center">
+                    <div class="page2-center-top">
+                        <div class="chart-title-content">
+                            <div class="chart-title"><h2>固投预测趋势图展示</h2></div>
+                        </div>
+                        <div class="chart" id="p2-chart-center"></div>
+                    </div>
+                    <div class="page2-center-bottom">
+                        <div class="page2-center-bottom-item">
+                            <div class="chart-title-content">
+                                <div class="chart-title"><h2>神经网络模型预测展示</h2></div>
+                            </div>
+                            <div class="chart" id="p2-chart-nn"></div>
+                        </div>
+                        <div class="page2-center-bottom-item">
+                            <div class="chart-title-content">
+                                <div class="chart-title"><h2>ARIMA模型预测展示</h2></div>
+                            </div>
+                            <div class="chart" id="p2-chart-arima"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: 各分类投资预测趋势图 -->
+                <div class="page2-right">
+                    <div>
+                        <div class="chart-title-content">
+                            <div class="chart-title"><h2>基础设施投资预测趋势图</h2></div>
+                        </div>
+                        <div class="chart" id="p2-chart-right1"></div>
+                    </div>
+                    <div>
+                        <div class="chart-title-content">
+                            <div class="chart-title"><h2>制造业投资预测趋势图</h2></div>
+                        </div>
+                        <div class="chart" id="p2-chart-right2"></div>
+                    </div>
+                    <div>
+                        <div class="chart-title-content">
+                            <div class="chart-title"><h2>房地产投资预测趋势图</h2></div>
+                        </div>
+                        <div class="chart" id="p2-chart-right3"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== PAGE 3: 趋势联动 ==================== -->
+        <div class="tab-page" id="page3">
+            <div class="page3-layout">
+                <div class="page3-title-bar">
+                    <div class="chart-title"><h2>温度计指数与固投增速联动趋势</h2></div>
+                </div>
+                <div class="page3-chart-container">
+                    <div class="chart" id="p3-chart-main"></div>
+                </div>
+                <div class="page3-conclusion">
+                    <h3>分析结论</h3>
+                    <p id="p3-conclusion-text">
+                        2026年5月，固定资产投资温度计指数降至28.91，处于蓝灯/较低温区间（30以下），
+                        反映投资市场整体偏冷。固投累计同比增速为-1.4%，延续2026年以来的负增长态势。
+                        从趋势看，温度计指数自2025年6月峰值61.93持续回落，已连续11个月下降，
+                        表明固定资产投资动能持续减弱。基础设施投资虽保持正增长（7.1%，2026/04），
+                        但制造业投资增速降至0.1%，房地产开发投资持续深度负增长（-12.8%），
+                        高技术制造业投资亦转负（-6.1%）。建议关注政策发力效果，
+                        特别是专项债发行加速和基建投资托底作用的持续性。
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ========== Time Update ==========
+        function updateTime() {
+            const now = new Date();
+            const formatted = now.toLocaleString('zh-CN', {
+                year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+            });
+            document.getElementById('currentTime').textContent = formatted;
+        }
+        setInterval(updateTime, 1000);
+        updateTime();
+
+        // ========== Screen Scaling ==========
+        function handleResize() {
+            const container = document.getElementById('screen-container');
+            const scale = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+            container.style.transform = `scale(${scale})`;
+            container.style.transformOrigin = '0 0';
+            container.style.left = (window.innerWidth - 1920 * scale) / 2 + 'px';
+            container.style.top = (window.innerHeight - 1080 * scale) / 2 + 'px';
+        }
+        window.addEventListener('resize', handleResize);
+        handleResize();
+
+        // ========== Tab Navigation ==========
+        document.querySelectorAll('.tab-nav-item').forEach(tab => {
+            tab.addEventListener('click', function() {
+                document.querySelectorAll('.tab-nav-item').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-page').forEach(p => p.classList.remove('active'));
+                this.classList.add('active');
+                const pageId = this.dataset.page;
+                document.getElementById(pageId).classList.add('active');
+                // Lazy init Page 3 chart on first switch
+                if (pageId === 'page3' && !p3Initialized) {
+                    p3Main = initChart('p3-chart-main');
+                    updateP3Chart();
+                    p3Initialized = true;
+                }
+                setTimeout(() => { Object.values(allCharts).forEach(c => { if (c) c.resize(); }); }, 150);
+            });
+        });
+
+        // ========== Data (数据整合0630) ==========
+        const months = ['2025/03','2025/04','2025/05','2025/06','2025/07','2025/08','2025/09','2025/10','2025/11','2025/12','2026/01','2026/02','2026/03','2026/04','2026/05'];
+
+        // Layer scores (页面一)
+        const layerScores = {
+            core:    [0.2784,0.2874,0.3318,0.3362,0.2721,0.2499,0.2588,0.2180,0.2187,0.2221,0.1304,0.1058,0.1265,0.1213,0.1196],
+            support: [0.1523,0.1601,0.1702,0.1561,0.1319,0.1348,0.1193,0.1549,0.1427,0.1389,0.1180,0.1040,0.0913,0.0981,0.0952],
+            verify:  [0.1087,0.1002,0.1110,0.1290,0.1235,0.1037,0.1015,0.1054,0.1063,0.0945,0.0906,0.0897,0.0965,0.0911,0.0786]
+        };
+
+        // Indicators by layer (页面一)
+        const layerIndicators = {
+            core: {
+                '地方政府专项债(亿元)':     [16,138,77,281,224,74,94,506,275,19,0,619,86,82,26],
+                '土地销售收入(万元)':       [216105.24,262951.13,367365.51,328489.29,328756.43,796924.95,846268.56,1154852.13,1193585.67,2660987.30,478990.48,162196.23,null,null,null],
+                '工程建设中标金额(万元)':   [689299.43,1618678.66,1265060.67,1538574.88,1498642.38,1709159.17,3033691.71,1780587.51,1477739.94,2346542.48,1178009.94,1410579.61,1113492.76,null,null],
+                '实际使用外资金额(亿美元)': [0.81,0.2,0.69,0.37,0.2,0.46,0.18,0.15,0.6,1.14,0.66,0.44,0.47,0.09,null],
+                '工业企业用电量(亿千瓦时)': [117.65,112.21,114.6,115.65,126.12,124.27,119.5,116.14,113.67,117.2,117.43,72.21,114.28,115.31,121.84],
+                '集成电路产量(万块)':       [30522.1,29094,26925.1,29518.5,32782.8,41420,51369.9,46590.8,51476.5,64834.8,null,null,37838.4,37782.4,34735.5],
+                '电工仪器仪表产量(万台)':   [15.5,11.39,10.54,14.13,2.08,8.47,17.45,16.1,26.31,24.82,null,null,17.31,14.85,43.77]
+            },
+            support: {
+                '公共预算支出(亿元)':                 [616.91,647.9,503.87,619.41,544.51,448.08,686.23,418.17,538.17,1070.7,560.5,793.7,653.4,530,null],
+                '国有资本经营收入(亿元)':             [2.6,6.3,14.1,13.5,7.7,9.4,25.7,24.3,33.3,111.9,1.6,11.7,4,9,null],
+                '金融机构贷款余额期末同比增速(%)':   [7.42,6.87,6.69,6.89,6.64,6.34,6.50,6.54,6.47,6.99,7.97,8.35,7.81,7.98,7.65],
+                '水泥产量(万吨)':                     [628.66,541.01,492.09,489.22,502.07,564.67,589.61,541.05,602.09,654.65,null,null,392.44,398.97,444.57],
+                '钢材产量(万吨)':                     [303.96,307.44,308.92,342.12,172.72,324.14,328.94,327.55,315.99,315.47,null,null,292.65,306.41,302.34],
+                '出口金额(万元)':                     [2363107.2,2380315.88,2475849.75,2727237.01,2610831.48,2824776.87,2837435.5,2829227,2837667.39,2765514.66,2806033.64,2131559.85,2415347.94,2721835.8,2834697.91],
+                'PMI新订单指数':                      [50.8,50.1,49.7,49.4,49.3,49.4,49.7,49.5,49.8,51.5,49.6,48.9,50.9,40.9,48.9]
+            },
+            verify: {
+                '规模以上工业企业亏损总额(亿元)':   [null,19.7,21.9,18.3,13,14.5,13.9,16.5,13,21.2,null,null,24.9,28.5,null],
+                '规模以上工业企业资产负债率(%)':     [59.94,60.15,60.27,60.53,60.50,60.58,60.51,60.52,60.46,60.03,null,60.50,60.69,61.17,null],
+                '规模以上工业企业存货(亿元)':         [4177.3,4227.9,4307.8,4265.5,4289,4302.2,4334.6,4435.1,4561,4514.8,null,4632.2,4751.3,4931.4,null],
+                '当月网络销售额(万元)':               [2269060.5,2232519.1,2443804.1,2813794.5,2246883.3,2295599.1,2550156.4,2931820.9,3462086.1,2985218,2873331.1,1983013.5,2935894.9,2621902.3,2836433.4],
+                '农产品重点企业网络零售额(万元)':     [42720.26,42775.09,56771.3,68753.3,67540,64851.79,80377.63,78743.57,95168.02,79513.11,61005.88,62875.47,83817.88,75868.29,65276.1],
+                '宏观经济环境指数':                   [55.51,53.39,53.39,53.39,53.4,53.4,53.4,56.15,56.15,56.15,54.33,54.33,54.33,null,null],
+                '市场需求指数':                       [54.9,52.79,52.79,52.79,54.1,54.1,54.1,56.25,56.25,56.25,55.18,55.18,55.18,null,null],
+                '企业生产经营指数':                   [55.18,53.39,53.39,53.39,53.61,53.61,53.61,57.52,57.52,57.52,58.45,58.45,58.45,null,null]
+            }
+        };
+
+        // KPI data (核心层 indicators for KPI cards)
+        const kpiData = {
+            electricity:  { data: [117.65,112.21,114.6,115.65,126.12,124.27,119.5,116.14,113.67,117.2,117.43,72.21,114.28,115.31,121.84] },
+            ic:           { data: [30522.1,29094,26925.1,29518.5,32782.8,41420,51369.9,46590.8,51476.5,64834.8,null,null,37838.4,37782.4,34735.5] },
+            instrument:   { data: [15.5,11.39,10.54,14.13,2.08,8.47,17.45,16.1,26.31,24.82,null,null,17.31,14.85,43.77] },
+            foreign:      { data: [0.81,0.2,0.69,0.37,0.2,0.46,0.18,0.15,0.6,1.14,0.66,0.44,0.47,0.09,null] }
+        };
+
+        // Page 2 forecast data (页面二)
+        const forecastMonths = ['2024/01','2024/02','2024/03','2024/04','2024/05','2024/06','2024/07','2024/08','2024/09','2024/10','2024/11','2024/12','2025/01','2025/02','2025/03','2025/04','2025/05','2025/06','2025/07','2025/08','2025/09','2025/10','2025/11','2025/12','2026/01','2026/02','2026/03','2026/04','2026/05'];
+        const forecastData = {
+            fixedAsset: {
+                actual:   ['/',-2.8,-1.1,2.5,3.3,3.5,3.8,4,4.3,4.5,4.7,4.8,'/',5,5.2,5.3,5.4,5.4,5.1,4,2.6,2.2,2,1.6,'/',0.1,0.9,-0.6,-1.4],
+                forecast: ['/',null,null,null,null,null,null,null,null,null,null,null,'/','/',null,null,null,null,null,null,null,null,null,null,'/',1.33,1,1.05,-0.98]
+            },
+            infrastructure: {
+                actual:   [null,4.9,2.7,2.7,3.3,-0.1,0.7,2.7,8.4,10.3,11.4,11.1,null,9.9,14.1,16.8,17.3,17.5,16.2,12.8,6.2,5.5,5.7,5.4,'/',8,5.4,7.1,6.9],
+                forecast: [null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,'/',null,11.17,14.6,14.94]
+            },
+            realEstate: {
+                actual:   ['/',-10.5,-12.8,-11.4,-10.5,-10.9,-10.6,-9.5,-9.6,-9.6,-9,-8.4,null,-10.4,-10.2,-10.3,-10.4,-10.4,-10.3,-10.4,-10.9,-11.1,-11.3,-11.6,'/',-12.7,-12.7,-12.8,-13.9],
+                forecast: ['/',null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,'/',null,-12.64,-12.46,-12.4]
+            },
+            manufacturing: {
+                actual:   [null,null,3.6,3.3,7.1,8.4,7.9,null,9,9,8.8,null,14.1,12.5,12.2,12.7,11.5,10.7,9.3,7.7,6.9,6.5,6.6,null,0.3,1.6,0.1,null,-0.9],
+                forecast: [null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,'/',null,-0.49,-0.24,0.61]
+            },
+            highTech: {
+                actual:   [null,null,null,-5.7,null,null,1.1,1.3,null,4.6,6.1,5.9,null,10,10.8,12.7,15.7,12.9,12.2,11.3,9.6,7.4,6.3,6,null,null,-5.3,-6.1,-6.3],
+                forecast: [null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,'/',null,12.31,null,null]
+            }
+        };
+
+        // Page 3 data (页面三)
+        const page3Months = ['2025/03','2025/04','2025/05','2025/06','2025/07','2025/08','2025/09','2025/10','2025/11','2025/12','2026/01','2026/02','2026/03','2026/04','2026/05'];
+        const tempIndex = [58.47,59.58,61.78,61.93,57.32,48.12,47.12,46.54,44.23,42.66,32.44,29.41,31.57,29.61,28.91];
+        const fixedAssetGrowth = [5.2,5.3,5.4,5.4,5.1,4.0,2.6,2.2,2.0,1.6,null,0.1,0.9,-0.6,-1.4];
+
+        // ========== Chart Instances ==========
+        let allCharts = {};
+        function initChart(id) {
+            const el = document.getElementById(id);
+            if (el) { allCharts[id] = echarts.init(el); return allCharts[id]; }
+            return null;
+        }
+
+        // Page 1: gauges + 3 layer indicator charts
+        const gaugeCore = initChart('gauge-core');
+        const gaugeSupport = initChart('gauge-support');
+        const gaugeVerify = initChart('gauge-verify');
+        const chartLayerCore = initChart('chart-layer-core');
+        const chartLayerSupport = initChart('chart-layer-support');
+        const chartLayerVerify = initChart('chart-layer-verify');
+        const chartTherm = initChart('chart-therm');
+
+        // Page 2 charts
+        const p2Left1 = initChart('p2-chart-left1');
+        const p2Left2 = initChart('p2-chart-left2');
+        const p2Left3 = initChart('p2-chart-left3');
+        const p2Center = initChart('p2-chart-center');
+        const p2NN = initChart('p2-chart-nn');
+        const p2Arima = initChart('p2-chart-arima');
+        const p2Right1 = initChart('p2-chart-right1');
+        const p2Right2 = initChart('p2-chart-right2');
+        const p2Right3 = initChart('p2-chart-right3');
+
+        // Page 3 (deferred: init on first tab switch)
+        let p3Main = null;
+        let p3Initialized = false;
+
+        // ========== Common Styles ==========
+        const textStyle = { fontFamily: 'Microsoft YaHei', fontSize: 11, color: '#A9CCFF' };
+        const tooltipStyle = {
+            trigger: 'axis', backgroundColor: 'rgba(255,255,255,0.95)',
+            borderColor: '#ddd', textStyle: { color: '#333', fontSize: 13 }
+        };
+        const lineGrad = () => new echarts.graphic.LinearGradient(1, 0, 0, 0, [
+            { offset: 0.1, color: '#1DAF11' }, { offset: 0.86, color: '#61D965' }
+        ]);
+        const lineGradBlue = () => new echarts.graphic.LinearGradient(1, 0, 0, 0, [
+            { offset: 0, color: '#0075FF' }, { offset: 1, color: '#00BFFF' }
+        ]);
+
+        function parseData(arr) {
+            return arr.map(v => {
+                if (v === '/' || v === '' || v === null || v === undefined) return null;
+                return parseFloat(v);
+            });
+        }
+
+        let currentMonthIdx = months.length - 1; // default: latest month
+
+        // ========== 月份筛选器 ==========
+        const monthSelect = document.getElementById('monthSelect');
+        months.forEach((m, i) => {
+            const opt = document.createElement('option');
+            opt.value = i;
+            opt.textContent = m.replace('/', '年') + '月';
+            if (i === currentMonthIdx) opt.selected = true;
+            monthSelect.appendChild(opt);
+        });
+        monthSelect.addEventListener('change', function() {
+            currentMonthIdx = parseInt(this.value);
+            updateGauges(currentMonthIdx);
+            updateKPIs(currentMonthIdx);
+            renderThermChart();
+        });
+
+        // ========== Thermometer Tab Switching ==========
+        let thermView = 'current'; // 'current' or 'history'
+        document.querySelectorAll('.therm-tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                document.querySelectorAll('.therm-tab').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+                thermView = this.dataset.view;
+                renderThermChart();
+            });
+        });
+
+        // ========== Layer Indicator Charts (3 charts, all expanded) ==========
+        const layerColors = ['#00a2ff','#61D965','#FF6B35','#FFD700','#E040FB','#00E5FF','#FF5252','#7C4DFF'];
+
+        function renderLayerChart(chart, layer) {
+            const indicators = layerIndicators[layer];
+            const names = Object.keys(indicators);
+            const series = names.map((name, i) => ({
+                name: name,
+                type: 'line',
+                data: indicators[name],
+                connectNulls: true,
+                symbol: 'circle',
+                symbolSize: 4,
+                lineStyle: { width: 1.5, color: layerColors[i % layerColors.length] },
+                itemStyle: { color: layerColors[i % layerColors.length] }
+            }));
+
+            chart.setOption({
+                tooltip: {
+                    trigger: 'axis', backgroundColor: 'rgba(255,255,255,0.95)',
+                    borderColor: '#ddd', textStyle: { color: '#333', fontSize: 11 },
+                    axisPointer: { lineStyle: { color: '#555' } }
+                },
+                legend: {
+                    data: names, top: 0, right: 5,
+                    textStyle: { fontSize: 10, color: '#A9CCFF' },
+                    type: 'scroll', pageTextStyle: { color: '#A9CCFF' },
+                    pageButtonPosition: 'end'
+                },
+                grid: { left: 55, right: 15, bottom: 8, top: 28, containLabel: true },
+                xAxis: {
+                    type: 'category', data: months,
+                    axisLabel: { interval: 0, rotate: 45, ...textStyle },
+                    axisLine: { lineStyle: { color: '#E4E7ED' } }
+                },
+                yAxis: {
+                    type: 'value', nameTextStyle: textStyle,
+                    axisLine: { lineStyle: { color: '#A9CCFF' } },
+                    axisLabel: textStyle,
+                    splitLine: { lineStyle: { color: '#333', type: 'dashed' } }
+                },
+                series: series
+            }, true);
+        }
+
+        // ========== Gauge Charts ==========
+        function getGaugeColor(value, max) {
+            const pct = value / max;
+            if (pct >= 0.7) return '#FF4444';  // 红灯
+            if (pct >= 0.55) return '#FFA500';  // 黄灯
+            if (pct >= 0.4) return '#32CD32';   // 绿灯
+            return '#4488FF';                    // 蓝灯
+        }
+
+        function updateGauges(monthIdx) {
+            const gaugeConfigs = [
+                { chart: gaugeCore,   value: layerScores.core[monthIdx],    max: 0.35, name: '核心层', score: layerScores.core[monthIdx] },
+                { chart: gaugeSupport, value: layerScores.support[monthIdx], max: 0.20, name: '支撑层', score: layerScores.support[monthIdx] },
+                { chart: gaugeVerify,  value: layerScores.verify[monthIdx],  max: 0.15, name: '验证层', score: layerScores.verify[monthIdx] }
+            ];
+
+            gaugeConfigs.forEach(cfg => {
+                const displayValue = parseFloat((cfg.score * 100).toFixed(2));
+                const color = getGaugeColor(cfg.score, cfg.max);
+                cfg.chart.setOption({
+                    series: [{
+                        type: 'gauge',
+                        startAngle: 180,
+                        endAngle: 0,
+                        center: ['50%', '70%'],
+                        radius: '90%',
+                        min: 0,
+                        max: parseFloat((cfg.max * 100).toFixed(0)),
+                        splitNumber: 5,
+                        axisLine: {
+                            lineStyle: {
+                                width: 12,
+                                color: [
+                                    [0.3, '#4488FF'],
+                                    [0.55, '#32CD32'],
+                                    [0.75, '#FFA500'],
+                                    [1, '#FF4444']
+                                ]
+                            }
+                        },
+                        pointer: { itemStyle: { color: color }, width: 4, length: '60%' },
+                        axisTick: { distance: -12, length: 4, lineStyle: { color: '#fff', width: 1 } },
+                        splitLine: { distance: -12, length: 10, lineStyle: { color: '#fff', width: 1.5 } },
+                        axisLabel: { color: '#A9CCFF', distance: 18, fontSize: 10 },
+                        anchor: { show: true, showAbove: true, size: 16, itemStyle: { borderWidth: 3, borderColor: color, color: '#011430' } },
+                        title: { show: true, offsetCenter: [0, '30%'], fontSize: 13, color: '#7eb8e0' },
+                        detail: {
+                            valueAnimation: true,
+                            fontSize: 22,
+                            fontWeight: 'bold',
+                            offsetCenter: [0, '-10%'],
+                            formatter: '{value}',
+                            color: color,
+                            fontFamily: 'Alimama ShuHeiTi, sans-serif'
+                        },
+                        data: [{ value: displayValue, name: cfg.name + '得分' }]
+                    }]
+                }, true);
+            });
+        }
+
+        // ========== Right Panel Indicator Chart ==========
+        // ========== KPI Update ==========
+        function updateKPIs(monthIdx) {
+            const kpiMap = [
+                { valId: 'kpi1-val', dateId: 'kpi1-date', data: kpiData.electricity.data },
+                { valId: 'kpi2-val', dateId: 'kpi2-date', data: kpiData.ic.data },
+                { valId: 'kpi3-val', dateId: 'kpi3-date', data: kpiData.instrument.data },
+                { valId: 'kpi4-val', dateId: 'kpi4-date', data: kpiData.foreign.data }
+            ];
+            kpiMap.forEach(kpi => {
+                const val = kpi.data[monthIdx];
+                const dateEl = document.getElementById(kpi.dateId);
+                const valEl = document.getElementById(kpi.valId);
+                if (dateEl) dateEl.textContent = months[monthIdx];
+                if (valEl) valEl.textContent = val !== null && val !== undefined ? val : '--';
+            });
+        }
+
+        // ========== Dynamic Thermometer (参照温度计.jpg - 优化版) ==========
+        const ZONES = [
+            { name:'过热', lo:80, hi:100, color:'#FF3333', desc:'投资市场过热，需警惕泡沫风险',  icon:'☀️' },
+            { name:'偏热', lo:60, hi:80,  color:'#FF9900', desc:'投资市场偏热，存在过热风险' },
+            { name:'正常', lo:40, hi:60,  color:'#33CC33', desc:'投资市场运行正常' },
+            { name:'偏低', lo:20, hi:40,  color:'#00DDDD', desc:'投资市场偏冷，需要关注' },
+            { name:'过冷', lo:0,  hi:20,  color:'#3388FF', desc:'投资市场极度萎缩，需要刺激政策', icon:'❄' }
+        ];
+
+        function getZone(v) {
+            for (const z of ZONES) { if (v >= z.lo && v < z.hi) return z; }
+            return v >= 100 ? ZONES[0] : ZONES[4];
+        }
+
+        function renderThermChart() {
+            if (thermView === 'current') {
+                const val = tempIndex[currentMonthIdx];
+                const prevVal = currentMonthIdx > 0 ? tempIndex[currentMonthIdx - 1] : null;
+                const zone = getZone(val);
+                const change = prevVal !== null ? (val - prevVal) : 0;
+                const changeText = change >= 0 ? `较上月 ↑${Math.abs(change).toFixed(2)}` : `较上月 ↓${Math.abs(change).toFixed(2)}`;
+
+                const zones = [
+                    { name: '过热', lo: 80, hi: 100, color: '#FF3333' },
+                    { name: '偏热', lo: 60, hi: 80,  color: '#FF9900' },
+                    { name: '正常', lo: 40, hi: 60,  color: '#33CC33' },
+                    { name: '偏冷', lo: 20, hi: 40,  color: '#00DDDD' },
+                    { name: '过冷', lo: 0,  hi: 20,  color: '#3388FF' }
+                ];
+
+                // 动态获取容器尺寸
+                const chartEl = document.getElementById('chart-therm');
+                const chartW = chartEl ? chartEl.clientWidth : 658;
+                const chartH = chartEl ? chartEl.clientHeight : 520;
+
+                // 布局参数（根据容器自适应）— 管居中，左右对称
+                const tubeW = 48;                           // 管宽度（加粗更清晰）
+                const tubeH = Math.min(chartH * 0.70, 370); // 管高度，占容器70%
+                const tubeTop = (chartH - tubeH - 50) / 2;  // 垂直居中，留底部给液泡
+                const tubeX = chartW * 0.5;                  // 管中心X，容器正中
+                const bulbR = tubeW * 0.85;                  // 液泡半径（增大）
+                const bulbY = tubeTop + tubeH + bulbR + 8;  // 液泡中心Y
+                const fillH = (val / 100) * tubeH;           // 液柱高度
+                const fontSize = Math.max(10, Math.min(14, chartH / 40));
+
+                // 左侧描述区 — 紧贴管左侧
+                const descW = Math.min(140, chartW * 0.20);
+                const descX = tubeX - tubeW / 2 - descW - 45;
+                const descTop = tubeTop + 10;
+                const descH = tubeH - 10;
+
+                // 右侧值卡 — 贴管右侧
+                const cardW = Math.min(155, chartW * 0.22);
+                const cardH = 85;
+                const cardX = tubeX + tubeW / 2 + 50;
+                const cardTop = tubeTop + tubeH * 0.40;
+
+                chartTherm.setOption({
+                    tooltip: { trigger: 'item', backgroundColor: 'rgba(10,20,50,0.95)', borderColor: 'rgba(0,140,255,0.5)', textStyle: { color: '#b0d4f1', fontSize: 13 },
+                        formatter: () => `${months[currentMonthIdx]}<br/>温度指数: <b style="color:${zone.color};font-size:20px">${val.toFixed(2)}°C</b><br/>${zone.desc}` },
+                    xAxis: { show: false, min: 0, max: 100 },
+                    yAxis: { show: false, min: 0, max: 100 },
+                    series: [{ type: 'scatter', data: [], silent: true }],
+                    graphic: { elements: [
+                        // === 顶部装饰光环 ===
+                        { type: 'circle', left: tubeX - 18, top: tubeTop - 35, shape: { r: 18 }, style: {
+                            fill: 'transparent',
+                            stroke: zone.color,
+                            lineWidth: 2,
+                            shadowBlur: 20,
+                            shadowColor: zone.color
+                        }, z: 5 },
+                        { type: 'circle', left: tubeX - 10, top: tubeTop - 27, shape: { r: 10 }, style: {
+                            fill: zone.color,
+                            shadowBlur: 15,
+                            shadowColor: zone.color
+                        }, z: 6 },
+
+                        // === 左侧区域描述面板（简化版） ===
+                        { type: 'rect', left: descX, top: descTop, shape: { width: descW, height: descH, r: 8 }, style: {
+                            fill: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: 'rgba(5,20,50,0.85)' },
+                                { offset: 1, color: 'rgba(10,30,70,0.75)' }
+                            ]),
+                            stroke: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: 'rgba(0,140,255,0.4)' },
+                                { offset: 1, color: 'rgba(0,100,200,0.2)' }
+                            ]),
+                            lineWidth: 1.5,
+                            shadowBlur: 20, shadowColor: 'rgba(0,100,255,0.25)'
+                        } },
+                        ...zones.map((z, i) => {
+                            const isActive = val >= z.lo && val < z.hi;
+                            const y = descTop + 18 + (i * (descH - 20) / 5);
+                            return [
+                                { type: 'circle', left: descX + 12, top: y + 2, shape: { r: isActive ? 6 : 4 }, style: {
+                                    fill: isActive ? z.color : 'rgba(100,150,200,0.4)',
+                                    shadowBlur: isActive ? 12 : 0, shadowColor: z.color
+                                } },
+                                { type: 'text', left: descX + 26, top: y, style: {
+                                    text: z.name, fill: isActive ? z.color : 'rgba(180,210,240,0.7)',
+                                    fontSize: fontSize + (isActive ? 2 : 0), fontWeight: isActive ? 'bold' : 'normal',
+                                    fontFamily: 'Microsoft YaHei'
+                                } }
+                            ];
+                        }).flat(),
+
+                        // === 温度计管外框（精致玻璃质感） ===
+                        // 最外层光晕
+                        { type: 'rect', left: tubeX - tubeW/2 - 8, top: tubeTop - 8, shape: { width: tubeW + 16, height: tubeH + 16, r: tubeW/2 + 8 }, style: {
+                            fill: 'rgba(0,60,150,0.15)',
+                            shadowBlur: 40, shadowColor: 'rgba(0,120,255,0.4)'
+                        }, z: 0 },
+                        // 玻璃管外框
+                        { type: 'rect', left: tubeX - tubeW/2 - 2, top: tubeTop - 2, shape: { width: tubeW + 4, height: tubeH + 4, r: tubeW/2 + 2 }, style: {
+                            fill: 'rgba(0,30,80,0.5)',
+                            stroke: 'rgba(0,180,255,0.6)',
+                            lineWidth: 3,
+                            shadowBlur: 15, shadowColor: 'rgba(0,150,255,0.5)'
+                        }, z: 1 },
+                        // 玻璃管主体
+                        { type: 'rect', left: tubeX - tubeW/2, top: tubeTop, shape: { width: tubeW, height: tubeH, r: tubeW/2 }, style: {
+                            fill: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+                                { offset: 0, color: 'rgba(8,25,60,0.85)' },
+                                { offset: 0.25, color: 'rgba(12,35,80,0.7)' },
+                                { offset: 0.75, color: 'rgba(12,35,80,0.7)' },
+                                { offset: 1, color: 'rgba(8,25,60,0.85)' }
+                            ]),
+                            stroke: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+                                { offset: 0, color: 'rgba(0,180,255,0.7)' },
+                                { offset: 0.5, color: 'rgba(0,220,255,0.9)' },
+                                { offset: 1, color: 'rgba(0,180,255,0.7)' }
+                            ]),
+                            lineWidth: 2
+                        }, z: 2 },
+                        // 玻璃管左侧高光（粗）
+                        { type: 'rect', left: tubeX - tubeW/2 + 4, top: tubeTop + 20, shape: { width: 5, height: tubeH - 40, r: 2.5 }, style: {
+                            fill: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: 'rgba(200,240,255,0.4)' },
+                                { offset: 0.5, color: 'rgba(180,230,255,0.25)' },
+                                { offset: 1, color: 'rgba(200,240,255,0.4)' }
+                            ])
+                        }, z: 3 },
+                        // 玻璃管右侧高光（细）
+                        { type: 'rect', left: tubeX + tubeW/2 - 7, top: tubeTop + 30, shape: { width: 2, height: tubeH - 60, r: 1 }, style: {
+                            fill: 'rgba(150,220,255,0.2)'
+                        }, z: 3 },
+
+                        // === 温度计管内部渐变背景 ===
+                        { type: 'rect', left: tubeX - tubeW/2 + 5, top: tubeTop + 5, shape: { width: tubeW - 10, height: tubeH - 10, r: tubeW/2 - 5 }, style: {
+                            fill: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: 'rgba(255,50,50,0.5)' },
+                                { offset: 0.2, color: 'rgba(255,150,0,0.35)' },
+                                { offset: 0.45, color: 'rgba(60,220,60,0.25)' },
+                                { offset: 0.7, color: 'rgba(0,230,230,0.3)' },
+                                { offset: 1, color: 'rgba(50,130,255,0.5)' }
+                            ])
+                        }, z: 3 },
+
+                        // === 温度计液柱（从底部向上填充） ===
+                        // 液柱外发光
+                        { type: 'rect', left: tubeX - tubeW/2 + 3, top: tubeTop + tubeH - fillH - 3, shape: { width: tubeW - 6, height: Math.max(8, fillH + 6), r: 8 }, style: {
+                            fill: 'transparent',
+                            shadowBlur: 25, shadowColor: zone.color
+                        }, z: 4 },
+                        // 液柱主体
+                        { type: 'rect', left: tubeX - tubeW/2 + 6, top: tubeTop + tubeH - fillH, shape: { width: tubeW - 12, height: Math.max(4, fillH), r: 6 }, style: {
+                            fill: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: zone.color },
+                                { offset: 0.15, color: zone.color },
+                                { offset: 0.4, color: '#FFCC00' },
+                                { offset: 0.65, color: '#33CC33' },
+                                { offset: 0.85, color: '#00DDDD' },
+                                { offset: 1, color: '#3388FF' }
+                            ]),
+                            shadowBlur: 12, shadowColor: zone.color
+                        }, z: 5 },
+                        // 液柱顶部高光
+                        { type: 'ellipse', left: tubeX - tubeW/2 + 8, top: tubeTop + tubeH - fillH + 2, shape: { rX: (tubeW - 16) / 2, rY: 3 }, style: {
+                            fill: 'rgba(255,255,255,0.5)'
+                        }, z: 6 },
+                        // 液柱左侧高光
+                        { type: 'rect', left: tubeX - tubeW/2 + 9, top: tubeTop + tubeH - fillH + 8, shape: { width: 4, height: Math.max(0, fillH - 16), r: 2 }, style: {
+                            fill: 'rgba(255,255,255,0.4)'
+                        }, z: 6 },
+
+                        // === 液泡（底部大圆形，立体感强） ===
+                        // 液泡最外层光晕
+                        { type: 'circle', left: tubeX - bulbR - 10, top: bulbY - bulbR - 10, shape: { r: bulbR + 10 }, style: {
+                            fill: 'transparent',
+                            shadowBlur: 50, shadowColor: zone.color
+                        }, z: 3 },
+                        // 液泡外圈
+                        { type: 'circle', left: tubeX - bulbR - 3, top: bulbY - bulbR - 3, shape: { r: bulbR + 3 }, style: {
+                            fill: 'rgba(0,40,100,0.4)',
+                            stroke: 'rgba(0,180,255,0.5)',
+                            lineWidth: 2
+                        }, z: 4 },
+                        // 液泡主体
+                        { type: 'circle', left: tubeX - bulbR, top: bulbY - bulbR, shape: { r: bulbR }, style: {
+                            fill: new echarts.graphic.RadialGradient(0.35, 0.35, 0.9, [
+                                { offset: 0, color: '#ffffff' },
+                                { offset: 0.15, color: '#ffffff' },
+                                { offset: 0.3, color: zone.color },
+                                { offset: 0.7, color: zone.color },
+                                { offset: 1, color: 'rgba(0,0,0,0.4)' }
+                            ]),
+                            shadowBlur: 30, shadowColor: zone.color
+                        }, z: 5 },
+                        // 液泡高光（左上）
+                        { type: 'circle', left: tubeX - bulbR * 0.5, top: bulbY - bulbR * 0.5, shape: { r: bulbR * 0.35 }, style: {
+                            fill: 'rgba(255,255,255,0.6)'
+                        }, z: 6 },
+                        // 液泡小高光（右下）
+                        { type: 'circle', left: tubeX + bulbR * 0.2, top: bulbY + bulbR * 0.25, shape: { r: bulbR * 0.15 }, style: {
+                            fill: 'rgba(255,255,255,0.3)'
+                        }, z: 6 },
+
+                        // === 左侧刻度线和数字 ===
+                        ...[0, 20, 40, 60, 80, 100].map(v => {
+                            const y = tubeTop + tubeH - (v / 100) * tubeH;
+                            const isMajor = v % 20 === 0;
+                            const tickLen = isMajor ? 14 : 8;
+                            return [
+                                { type: 'line', left: tubeX - tubeW/2 - tickLen - 2, top: y, shape: { x1: 0, y1: 0, x2: tickLen, y2: 0 }, style: {
+                                    stroke: isMajor ? 'rgba(0,200,255,0.8)' : 'rgba(0,180,255,0.5)',
+                                    lineWidth: isMajor ? 2.5 : 1.5,
+                                    shadowBlur: isMajor ? 8 : 0, shadowColor: 'rgba(0,200,255,0.6)'
+                                }, z: 2 },
+                                { type: 'text', left: tubeX - tubeW/2 - tickLen - 6, top: y - fontSize * 0.55, style: {
+                                    text: String(v), fill: isMajor ? '#b0e0ff' : '#8ab8d8',
+                                    fontSize: isMajor ? fontSize + 2 : fontSize,
+                                    fontFamily: 'Microsoft YaHei', textAlign: 'right',
+                                    fontWeight: isMajor ? 'bold' : 'normal',
+                                    shadowBlur: isMajor ? 5 : 0, shadowColor: 'rgba(0,150,255,0.5)'
+                                } }
+                            ];
+                        }).flat(),
+
+                        // === 右侧区域标签（带指示线和背景） ===
+                        ...zones.map((z, i) => {
+                            const isActive = val >= z.lo && val < z.hi;
+                            const y = tubeTop + 15 + (i * (tubeH - 20) / 5);
+                            return [
+                                { type: 'line', left: tubeX + tubeW/2 + 2, top: y + 8, shape: { x1: 0, y1: 0, x2: 12, y2: 0 }, style: {
+                                    stroke: isActive ? z.color : 'rgba(100,150,200,0.3)',
+                                    lineWidth: isActive ? 2.5 : 1,
+                                    shadowBlur: isActive ? 10 : 0, shadowColor: z.color
+                                }, z: 2 },
+                                { type: 'text', left: tubeX + tubeW/2 + 18, top: y, style: {
+                                    text: z.name, fill: isActive ? z.color : 'rgba(160,200,235,0.5)',
+                                    fontSize: fontSize + (isActive ? 3 : 0), fontWeight: isActive ? 'bold' : 'normal',
+                                    fontFamily: 'Microsoft YaHei',
+                                    shadowBlur: isActive ? 12 : 0, shadowColor: z.color
+                                } }
+                            ];
+                        }).flat(),
+
+                        // === 当前值卡片（精致科技风） ===
+                        // 卡片外发光
+                        { type: 'rect', left: cardX - 3, top: cardTop - 3, shape: { width: cardW + 6, height: cardH + 6, r: 10 }, style: {
+                            fill: 'transparent',
+                            shadowBlur: 30, shadowColor: 'rgba(0,120,255,0.4)'
+                        }, z: 5 },
+                        // 卡片主体
+                        { type: 'rect', left: cardX, top: cardTop, shape: { width: cardW, height: cardH, r: 8 }, style: {
+                            fill: new echarts.graphic.LinearGradient(0, 0, 1, 1, [
+                                { offset: 0, color: 'rgba(8,30,70,0.95)' },
+                                { offset: 1, color: 'rgba(12,40,90,0.9)' }
+                            ]),
+                            stroke: new echarts.graphic.LinearGradient(0, 0, 1, 1, [
+                                { offset: 0, color: 'rgba(0,200,255,0.7)' },
+                                { offset: 0.5, color: 'rgba(0,160,255,0.5)' },
+                                { offset: 1, color: 'rgba(0,120,255,0.3)' }
+                            ]),
+                            lineWidth: 2,
+                            shadowBlur: 20, shadowColor: 'rgba(0,100,200,0.4)'
+                        }, z: 6 },
+                        // 卡片左侧指示箭头
+                        { type: 'polygon', left: cardX - 3, top: cardTop + cardH/2, shape: { points: [[0, 0], [-16, -11], [-16, 11]] }, style: {
+                            fill: zone.color,
+                            shadowBlur: 15, shadowColor: zone.color
+                        }, z: 7 },
+                        // 温度值
+                        { type: 'text', left: cardX + 18, top: cardTop + 14, style: {
+                            text: `${val.toFixed(2)}°C`, fill: zone.color,
+                            fontSize: Math.round(fontSize * 2.6), fontWeight: 'bold',
+                            fontFamily: 'Alimama ShuHeiTi, Microsoft YaHei',
+                            shadowBlur: 15, shadowColor: zone.color
+                        }, z: 7 },
+                        // 标签文字
+                        { type: 'text', left: cardX + 18, top: cardTop + cardH - 22, style: {
+                            text: '温度指数', fill: '#8ab8e0',
+                            fontSize: fontSize + 1, fontFamily: 'Microsoft YaHei'
+                        }, z: 7 },
+
+                        // === 底部月份和变化信息 ===
+                        { type: 'rect', left: tubeX - 105, bottom: 8, shape: { width: 210, height: 32, r: 16 }, style: {
+                            fill: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: 'rgba(8,25,60,0.85)' },
+                                { offset: 1, color: 'rgba(12,35,80,0.75)' }
+                            ]),
+                            stroke: 'rgba(0,140,255,0.4)',
+                            lineWidth: 1.5,
+                            shadowBlur: 15, shadowColor: 'rgba(0,100,255,0.3)'
+                        }, z: 5 },
+                        { type: 'text', left: 'center', bottom: 16, style: {
+                            text: `${months[currentMonthIdx]}  ${changeText}`,
+                            fill: change >= 0 ? '#33FF66' : '#FF4466',
+                            fontSize: fontSize + 2, fontFamily: 'Microsoft YaHei',
+                            textAlign: 'center', fontWeight: 'bold',
+                            shadowBlur: 8, shadowColor: change >= 0 ? '#33FF66' : '#FF4466'
+                        }, z: 6 }
+                    ] }
+                }, true);
+            } else {
+                // 历史趋势图 — 匹配参考图样式
+                const fm = forecastMonths;
+                const actualData = parseData(forecastData.fixedAsset.actual);
+                const forecastDataArr = parseData(forecastData.fixedAsset.forecast);
+
+                // 计算数据范围用于背景色带
+                const allVals = [...actualData, ...forecastDataArr].filter(v => v !== null);
+                const vMin = Math.min(...allVals);
+                const vMax = Math.max(...allVals);
+                const vRange = vMax - vMin || 1;
+                const bandTop = vMin + vRange * 0.66;
+                const bandMid = vMin + vRange * 0.33;
+                const yPad = vRange * 0.08;
+
+                const fmLabels = fm.map(m => { const [, mo] = m.split('/'); return `${parseInt(mo)}月`; });
+
+                chartTherm.setOption({
+                    backgroundColor: 'transparent',
+                    tooltip: { trigger: 'axis', backgroundColor: 'rgba(10,20,50,0.9)', borderColor: 'rgba(0,140,255,0.4)', textStyle: { color: '#b0d4f1', fontSize: 13 } },
+                    legend: {
+                        data: ['江西省宏观经济综合预警指数走势图', '预测数值'],
+                        bottom: 2,
+                        textStyle: { fontSize: 11, color: '#7eb8e0' },
+                        itemWidth: 20, itemHeight: 10
+                    },
+                    grid: { left: 55, right: 25, bottom: 40, top: 15, containLabel: true },
+                    xAxis: {
+                        type: 'category',
+                        data: fmLabels,
+                        axisLabel: { interval: 2, rotate: 45, fontSize: 9, color: '#5a8ab5' },
+                        axisLine: { lineStyle: { color: 'rgba(0,120,200,0.3)' } },
+                        axisTick: { show: false }
+                    },
+                    yAxis: {
+                        type: 'value',
+                        name: '增速：%',
+                        nameTextStyle: { fontSize: 11, color: '#5a8ab5' },
+                        axisLabel: { fontSize: 10, color: '#5a8ab5' },
+                        splitLine: { show: false }
+                    },
+                    series: [
+                        {
+                            name: '江西省宏观经济综合预警指数走势图',
+                            type: 'line',
+                            data: actualData,
+                            smooth: false,
+                            symbol: 'circle',
+                            symbolSize: 4,
+                            lineStyle: { width: 2, color: '#00e5cc' },
+                            itemStyle: { color: '#00e5cc', borderColor: '#fff', borderWidth: 1 },
+                            connectNulls: false,
+                            markArea: {
+                                silent: true,
+                                data: [
+                                    [{ yAxis: bandTop, itemStyle: { color: 'rgba(100,50,160,0.35)' } }, { yAxis: vMax + yPad }],
+                                    [{ yAxis: bandMid, itemStyle: { color: 'rgba(30,140,80,0.30)' } }, { yAxis: bandTop }],
+                                    [{ yAxis: vMin - yPad, itemStyle: { color: 'rgba(15,40,90,0.40)' } }, { yAxis: bandMid }]
+                                ]
+                            }
+                        },
+                        {
+                            name: '预测数值',
+                            type: 'line',
+                            data: forecastDataArr,
+                            smooth: false,
+                            symbol: 'circle',
+                            symbolSize: 4,
+                            lineStyle: { width: 2, color: '#f0c040', type: 'dashed' },
+                            itemStyle: { color: '#f0c040' },
+                            connectNulls: false
+                        }
+                    ]
+                }, true);
+            }
+        }
+        function onMonthChange(monthIdx) {
+            currentMonthIdx = monthIdx;
+            if (monthSelect) monthSelect.value = monthIdx;
+            updateGauges(monthIdx);
+            updateKPIs(monthIdx);
+            renderThermChart();
+            // 3 layer indicator charts don't change with month (show full time series)
+        }
+
+        // ========== Page 2 Chart Functions ==========
+        function createForecastChart(chart, actualData, forecastData, fm, name, yName) {
+            chart.setOption({
+                tooltip: {
+                    trigger: 'axis', backgroundColor: 'rgba(255,255,255,0.95)',
+                    borderColor: '#ddd', textStyle: { color: '#333', fontSize: 13 },
+                    formatter: function(params) {
+                        let tip = '<b>' + fm[params[0].dataIndex] + '</b><br/>';
+                        params.forEach(p => {
+                            if (p.value !== null && p.value !== undefined) {
+                                tip += p.marker + ' ' + p.seriesName + ': ' + p.value.toFixed(2) + '%<br/>';
+                            }
+                        });
+                        return tip;
+                    }
+                },
+                legend: { data: ['实际值', '预测值'], top: 0, right: 20, textStyle: { fontSize: 11, color: '#A9CCFF' } },
+                grid: { left: 50, right: 30, bottom: 10, top: 32, containLabel: true },
+                xAxis: { type: 'category', data: fm, axisLabel: { interval: 2, rotate: 45, ...textStyle }, axisLine: { lineStyle: { color: '#E4E7ED' } } },
+                yAxis: { type: 'value', name: yName || '增速(%)', nameTextStyle: textStyle, axisLine: { lineStyle: { color: '#A9CCFF' } }, axisLabel: textStyle, splitLine: { lineStyle: { color: '#333', type: 'dashed' } } },
+                series: [
+                    { name: '实际值', type: 'line', data: parseData(actualData), lineStyle: { width: 2, color: '#00a2ff' }, symbol: 'circle', symbolSize: 5, itemStyle: { color: '#00a2ff' }, connectNulls: true },
+                    { name: '预测值', type: 'line', data: parseData(forecastData), lineStyle: { width: 2, color: '#FF6B35', type: 'dashed' }, symbol: 'diamond', symbolSize: 6, itemStyle: { color: '#FF6B35' }, connectNulls: true }
+                ]
+            }, true);
+        }
+
+        function updateP2Charts() {
+            const fd = forecastData;
+            const fm = forecastMonths;
+
+            createForecastChart(p2Left1, fd.fixedAsset.actual, fd.fixedAsset.forecast, fm, '固投增速', '增速(%)');
+
+            p2Left2.setOption({
+                tooltip: tooltipStyle,
+                legend: { data: ['基础设施(实际)', '基础设施(预测)', '制造业(实际)', '制造业(预测)'], top: 0, right: 5, textStyle: { fontSize: 9, color: '#A9CCFF' } },
+                grid: { left: 50, right: 15, bottom: 10, top: 36, containLabel: true },
+                xAxis: { type: 'category', data: fm, axisLabel: { interval: 2, rotate: 45, ...textStyle }, axisLine: { lineStyle: { color: '#E4E7ED' } } },
+                yAxis: { type: 'value', name: '增速(%)', nameTextStyle: textStyle, axisLine: { lineStyle: { color: '#A9CCFF' } }, axisLabel: textStyle, splitLine: { lineStyle: { color: '#333', type: 'dashed' } } },
+                series: [
+                    { name: '基础设施(实际)', type: 'line', data: parseData(fd.infrastructure.actual), lineStyle: { width: 2, color: '#00a2ff' }, symbol: 'circle', symbolSize: 4, itemStyle: { color: '#00a2ff' }, connectNulls: true },
+                    { name: '基础设施(预测)', type: 'line', data: parseData(fd.infrastructure.forecast), lineStyle: { width: 2, color: '#00a2ff', type: 'dashed' }, symbol: 'diamond', symbolSize: 4, itemStyle: { color: '#00a2ff' }, connectNulls: true },
+                    { name: '制造业(实际)', type: 'line', data: parseData(fd.manufacturing.actual), lineStyle: { width: 2, color: '#61D965' }, symbol: 'circle', symbolSize: 4, itemStyle: { color: '#61D965' }, connectNulls: true },
+                    { name: '制造业(预测)', type: 'line', data: parseData(fd.manufacturing.forecast), lineStyle: { width: 2, color: '#61D965', type: 'dashed' }, symbol: 'diamond', symbolSize: 4, itemStyle: { color: '#61D965' }, connectNulls: true }
+                ]
+            }, true);
+
+            p2Left3.setOption({
+                tooltip: tooltipStyle,
+                legend: { data: ['房地产(实际)', '房地产(预测)', '高技术(实际)', '高技术(预测)'], top: 0, right: 5, textStyle: { fontSize: 9, color: '#A9CCFF' } },
+                grid: { left: 50, right: 15, bottom: 10, top: 36, containLabel: true },
+                xAxis: { type: 'category', data: fm, axisLabel: { interval: 2, rotate: 45, ...textStyle }, axisLine: { lineStyle: { color: '#E4E7ED' } } },
+                yAxis: { type: 'value', name: '增速(%)', nameTextStyle: textStyle, axisLine: { lineStyle: { color: '#A9CCFF' } }, axisLabel: textStyle, splitLine: { lineStyle: { color: '#333', type: 'dashed' } } },
+                series: [
+                    { name: '房地产(实际)', type: 'line', data: parseData(fd.realEstate.actual), lineStyle: { width: 2, color: '#FF6B35' }, symbol: 'circle', symbolSize: 4, itemStyle: { color: '#FF6B35' }, connectNulls: true },
+                    { name: '房地产(预测)', type: 'line', data: parseData(fd.realEstate.forecast), lineStyle: { width: 2, color: '#FF6B35', type: 'dashed' }, symbol: 'diamond', symbolSize: 4, itemStyle: { color: '#FF6B35' }, connectNulls: true },
+                    { name: '高技术(实际)', type: 'line', data: parseData(fd.highTech.actual), lineStyle: { width: 2, color: '#E040FB' }, symbol: 'circle', symbolSize: 4, itemStyle: { color: '#E040FB' }, connectNulls: true },
+                    { name: '高技术(预测)', type: 'line', data: parseData(fd.highTech.forecast), lineStyle: { width: 2, color: '#E040FB', type: 'dashed' }, symbol: 'diamond', symbolSize: 4, itemStyle: { color: '#E040FB' }, connectNulls: true }
+                ]
+            }, true);
+
+            createForecastChart(p2Center, fd.fixedAsset.actual, fd.fixedAsset.forecast, fm, '固投预测', '增速(%)');
+
+            // NN/ARIMA 模型预测图 — 当前使用Excel预测数据，待南航团队提供真实模型输出后替换
+            p2NN.setOption({
+                tooltip: { trigger: 'axis', backgroundColor: 'rgba(255,255,255,0.95)', borderColor: '#ddd', textStyle: { color: '#333', fontSize: 12 } },
+                legend: { data: ['实际值', '预测值'], top: 0, right: 10, textStyle: { fontSize: 10, color: '#A9CCFF' } },
+                grid: { left: 50, right: 20, bottom: 10, top: 32, containLabel: true },
+                xAxis: { type: 'category', data: fm, axisLabel: { interval: 3, rotate: 45, ...textStyle }, axisLine: { lineStyle: { color: '#E4E7ED' } } },
+                yAxis: { type: 'value', name: '增速(%)', nameTextStyle: textStyle, axisLine: { lineStyle: { color: '#A9CCFF' } }, axisLabel: textStyle, splitLine: { lineStyle: { color: '#333', type: 'dashed' } } },
+                series: [
+                    { name: '实际值', type: 'line', data: parseData(fd.fixedAsset.actual), lineStyle: { width: 2, color: '#00a2ff' }, symbol: 'circle', symbolSize: 4, itemStyle: { color: '#00a2ff' }, connectNulls: true },
+                    { name: '预测值', type: 'line', data: parseData(fd.fixedAsset.forecast), lineStyle: { width: 2, color: '#FFD700', type: 'dashed' }, symbol: 'diamond', symbolSize: 4, itemStyle: { color: '#FFD700' }, connectNulls: true }
+                ]
+            }, true);
+
+            p2Arima.setOption({
+                tooltip: { trigger: 'axis', backgroundColor: 'rgba(255,255,255,0.95)', borderColor: '#ddd', textStyle: { color: '#333', fontSize: 12 } },
+                legend: { data: ['实际值', '预测值'], top: 0, right: 10, textStyle: { fontSize: 10, color: '#A9CCFF' } },
+                grid: { left: 50, right: 20, bottom: 10, top: 32, containLabel: true },
+                xAxis: { type: 'category', data: fm, axisLabel: { interval: 3, rotate: 45, ...textStyle }, axisLine: { lineStyle: { color: '#E4E7ED' } } },
+                yAxis: { type: 'value', name: '增速(%)', nameTextStyle: textStyle, axisLine: { lineStyle: { color: '#A9CCFF' } }, axisLabel: textStyle, splitLine: { lineStyle: { color: '#333', type: 'dashed' } } },
+                series: [
+                    { name: '实际值', type: 'line', data: parseData(fd.fixedAsset.actual), lineStyle: { width: 2, color: '#00a2ff' }, symbol: 'circle', symbolSize: 4, itemStyle: { color: '#00a2ff' }, connectNulls: true },
+                    { name: '预测值', type: 'line', data: parseData(fd.fixedAsset.forecast), lineStyle: { width: 2, color: '#00E5FF', type: 'dashed' }, symbol: 'diamond', symbolSize: 4, itemStyle: { color: '#00E5FF' }, connectNulls: true }
+                ]
+            }, true);
+
+            createForecastChart(p2Right1, fd.infrastructure.actual, fd.infrastructure.forecast, fm, '基础设施', '增速(%)');
+            createForecastChart(p2Right2, fd.manufacturing.actual, fd.manufacturing.forecast, fm, '制造业', '增速(%)');
+            createForecastChart(p2Right3, fd.realEstate.actual, fd.realEstate.forecast, fm, '房地产', '增速(%)');
+        }
+
+        // ========== Page 3 Chart ==========
+        function updateP3Chart() {
+            p3Main.setOption({
+                tooltip: {
+                    trigger: 'axis', backgroundColor: 'rgba(255,255,255,0.95)',
+                    borderColor: '#ddd', textStyle: { color: '#333', fontSize: 14 },
+                    axisPointer: { type: 'cross', crossStyle: { color: '#999' } }
+                },
+                legend: { data: ['温度计指数', '固投累计同比增速(%)'], top: 10, right: 80, textStyle: { fontSize: 14, color: '#fff' } },
+                grid: { left: 70, right: 70, bottom: 40, top: 60, containLabel: true },
+                xAxis: { type: 'category', data: page3Months, axisLabel: { interval: 0, rotate: 30, fontSize: 13, color: '#A9CCFF' }, axisLine: { lineStyle: { color: '#E4E7ED' } }, boundaryGap: false },
+                yAxis: [
+                    { type: 'value', name: '温度计指数', nameTextStyle: { fontSize: 13, color: '#FF6B35' }, axisLine: { lineStyle: { color: '#FF6B35' } }, axisLabel: { fontSize: 12, color: '#FF6B35' }, splitLine: { lineStyle: { color: '#333', type: 'dashed' } }, min: 0, max: 80 },
+                    { type: 'value', name: '增速(%)', nameTextStyle: { fontSize: 13, color: '#00a2ff' }, axisLine: { lineStyle: { color: '#00a2ff' } }, axisLabel: { fontSize: 12, color: '#00a2ff' }, splitLine: { show: false } }
+                ],
+                series: [
+                    {
+                        name: '温度计指数', type: 'line', data: tempIndex,
+                        smooth: true,
+                        symbol: 'circle', symbolSize: 8,
+                        lineStyle: { width: 3, color: '#FF6B35' },
+                        itemStyle: { color: '#FF6B35' },
+                        areaStyle: {
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: 'rgba(255,107,53,0.45)' },
+                                { offset: 1, color: 'rgba(255,107,53,0.03)' }
+                            ])
+                        },
+                        yAxisIndex: 0,
+                        markLine: {
+                            silent: true,
+                            symbol: 'none',
+                            lineStyle: { color: '#FFA500', type: 'dashed', width: 1.5 },
+                            label: { formatter: '较高温 50', color: '#FFA500', fontSize: 11, position: 'insideEndTop' },
+                            data: [{ yAxis: 50 }]
+                        }
+                    },
+                    {
+                        name: '固投累计同比增速(%)', type: 'line', data: fixedAssetGrowth,
+                        smooth: true,
+                        symbol: 'diamond', symbolSize: 8,
+                        lineStyle: { width: 3, color: '#00a2ff', type: 'solid' },
+                        itemStyle: { color: '#fff', borderColor: '#00a2ff', borderWidth: 2 },
+                        connectNulls: true, yAxisIndex: 1,
+                        markLine: {
+                            silent: true,
+                            symbol: 'none',
+                            lineStyle: { color: '#4488FF', type: 'dashed', width: 1.5 },
+                            label: { formatter: '零轴 0%', color: '#4488FF', fontSize: 11, position: 'insideEndTop' },
+                            data: [{ yAxis: 0 }]
+                        }
+                    }
+                ]
+            }, true);
+        }
+
+        // ========== Initialize All ==========
+        updateGauges(currentMonthIdx);
+        updateKPIs(currentMonthIdx);
+        renderThermChart();
+        renderLayerChart(chartLayerCore, 'core');
+        renderLayerChart(chartLayerSupport, 'support');
+        renderLayerChart(chartLayerVerify, 'verify');
+        updateP2Charts();
+        // Page 3 chart is lazy-init on first tab switch
+
+        // Resize all charts
+        window.addEventListener('resize', () => {
+            Object.values(allCharts).forEach(c => { if (c) c.resize(); });
+        });
+    </script>
+</body>
+</html>
